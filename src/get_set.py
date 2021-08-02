@@ -2,50 +2,9 @@ import requests as rq
 import pandas as pd
 import json as js
 
-from requests.api import get
-
-
-# def get_set():
-#     url = "https://api.scryfall.com/cards/search?q=set:ktk"
-#     s = rq.Session()
-#     response = s.post(url)
-#     orderList = []
-#     resp_json = response.json()
-#     orderList.append(resp_json["data"])
-#     while resp_json.get('has_more') == True:
-#         response = s.get(resp_json['next_page'])
-#         resp_json = response.json()
-#         orderList.append(resp_json["data"])
-#     return orderList
-
-# ktk = get_set()
-
-def get_set(url):
-    s = rq.Session()
-    response = s.get(str(url))
-    orderList = []
-    resp_json = response.json()
-    orderList.append(resp_json["data"])
-    while resp_json.get('has_more'):
-        response = s.get(resp_json['next_page'])
-        resp_json = response.json()
-        orderList.append(resp_json["data"])
-        return orderList
-
-a = get_set("https://api.scryfall.com/cards/search?q=set:ktk")
-
-b = a[0]+a[1]
 
 
 
-
-df=pd.DataFrame(b)
-sels = ["name", "type_line", "mana_cost", "cmc", "oracle_text", "power", "toughness", "keywords", "loyalty", "rarity"]
-df = df[sels]
-df[['Super Type','Sub type']] = df['type_line'].apply(lambda x: pd.Series(str(x).split("—")))
-df = df.drop(['type_line'], axis=1)
-df.columns = df.columns.str.replace('_', ' ')
-df.columns = df.columns.str.capitalize()
 
 def movecol(df, cols_to_move=[], ref_col='', place='After'):
     
@@ -63,11 +22,47 @@ def movecol(df, cols_to_move=[], ref_col='', place='After'):
     return(df[seg1 + seg2 + seg3])
 
 
-df = movecol(df, 
+def get_set(url):
+    '''getting dataset of card from scry fall'''
+    idents = {
+    '': 'Colorless',
+    'W':'White',
+    'U':'Blue',
+    'B': 'Black',
+    'R': 'Red',
+    'G':'Green',
+    'B W':'Orzhov',
+    'R W':'Boros',
+    'G U':'Simic',
+    'R U':'Izzet',
+    'B G':'Golgari',
+    'R U W':'Jeskai',
+    'B R W':'Mardu',
+    'B G W':'Abzan', 
+    'B G U':'Sultai', 
+    'G R U':'Temur'
+    }
+    s = rq.Session()
+    response = s.get(str(url))
+    orderList = []
+    resp_json = response.json()
+    orderList.append(resp_json["data"])
+    while resp_json.get('has_more'):
+        response = s.get(resp_json['next_page'])
+        resp_json = response.json()
+        orderList.append(resp_json["data"])
+        orderList= orderList[0]+orderList[1]
+        df=pd.DataFrame(orderList)
+        sels = ["name", "type_line", "colors", "mana_cost", "cmc", "oracle_text", "power", "toughness", "keywords", "loyalty", "rarity"]
+        df = df[sels]
+        df[['Super Type','Sub type']] = df['type_line'].apply(lambda x: pd.Series(str(x).split("—")))
+        df = df.drop(['type_line'], axis=1)
+        df.columns = df.columns.str.replace('_', ' ')
+        df.columns = df.columns.str.capitalize()
+        df = movecol(df, 
             cols_to_move=['Super type','Sub type'], 
             ref_col='Name',
             place='After')
-
-df.to_csv('data\\ktk.csv')
-print(df.head())
-print(len(df))
+        df['Colors'] = df['Colors'].apply(lambda x: ' '.join(x))
+        df['Colors'] = df['Colors'].replace(idents)
+        return(df)
