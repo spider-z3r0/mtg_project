@@ -4,40 +4,42 @@ import json as js
 
 
 
+r4 = rq.get("https://api.scryfall.com/cards/search?order=color&q=set%3Aktk&page?4")
+if r4.status_code == 200:
+    print('Gotit!')
+    js4= r4.json()
 
-# r1 = rq.get("https://api.scryfall.com/bulk-data")
-# js1 = r1.json()
-# print(type(js1))
-# for i in range(len(js1['data'])):
-#     a = js1['data'][i]['name']
-#     print(f'{i}. Name: {a}')
+    df = pd.DataFrame(js4['data'])
+    sels = ["name", "type_line", "mana_cost", "cmc", "oracle_text", "power", "toughness", "keywords", "loyalty", "rarity"]
+    df = df[sels]
+    df[['Super Type','Sub type']] = df['type_line'].apply(lambda x: pd.Series(str(x).split("—")))
+    df = df.drop(['type_line'], axis=1)
+    df.columns = df.columns.str.replace('_', ' ')
+    df.columns = df.columns.str.capitalize()
+
+    def movecol(df, cols_to_move=[], ref_col='', place='After'):
+        
+        cols = df.columns.tolist()
+        if place == 'After':
+            seg1 = cols[:list(cols).index(ref_col) + 1]
+            seg2 = cols_to_move
+        if place == 'Before':
+            seg1 = cols[:list(cols).index(ref_col)]
+            seg2 = cols_to_move + [ref_col]
+        
+        seg1 = [i for i in seg1 if i not in seg2]
+        seg3 = [i for i in cols if i not in seg1 + seg2]
+        
+        return(df[seg1 + seg2 + seg3])
 
 
-# r2 = rq.get("https://api.scryfall.com/cards/named?fuzzy=narset+parter+of_veils")
-# js2 = r2.json()
-# # print(type(js2))
-# # print(js2)
+    df = movecol(df, 
+                cols_to_move=['Super type','Sub type'], 
+                ref_col='Name',
+                place='After')
 
-# # for i in range(len(js2)):
-# #     for k,v in js2.items():
-# #         print(f'{1}.{k} : {v}\n')
-
-# vs = ["name", "set_name", "mana_cost", "type_line","oracle_text",]
-
-# for i in vs:
-#     print(f'{i}: {js2[i]}')
+    df.to_csv('data\\ktk.csv')
+    print(len(df))
 
 
-r3 = rq.get("https://api.scryfall.com/cards/search?q=narset")
-js3 = r3.json()
-# print(type(js2))
-print(js3)
 
-# for i in range(len(js2)):
-#     for k,v in js2.items():
-#         print(f'{1}.{k} : {v}\n')
-
-# vs = ["name", "set_name", "mana_cost", "type_line","oracle_text",]
-
-# for i in vs:
-#     print(f'{i}: {js2[i]}')
