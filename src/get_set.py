@@ -1,6 +1,7 @@
 import requests as rq
 import pandas as pd
 import json as js
+import time 
 
 
 
@@ -44,25 +45,33 @@ def get_set(url):
     }
     s = rq.Session()
     response = s.get(str(url))
+    time.sleep(0.1)
     orderList = []
     resp_json = response.json()
-    orderList.append(resp_json["data"])
-    while resp_json.get('has_more'):
+    orderList.extend(resp_json["data"])
+    while resp_json['has_more']:
         response = s.get(resp_json['next_page'])
+        time.sleep(0.1)
         resp_json = response.json()
-        orderList.append(resp_json["data"])
-        orderList= orderList[0]+orderList[1]
-        df=pd.DataFrame(orderList)
-        sels = ["name", "type_line", "colors", "mana_cost", "cmc", "oracle_text", "power", "toughness", "keywords", "loyalty", "rarity"]
-        df = df[sels]
-        df[['Super Type','Sub type']] = df['type_line'].apply(lambda x: pd.Series(str(x).split("—")))
-        df = df.drop(['type_line'], axis=1)
-        df.columns = df.columns.str.replace('_', ' ')
-        df.columns = df.columns.str.capitalize()
-        df = movecol(df, 
-            cols_to_move=['Super type','Sub type'], 
-            ref_col='Name',
-            place='After')
-        df['Colors'] = df['Colors'].apply(lambda x: ' '.join(x))
-        df['Colors'] = df['Colors'].replace(idents)
-        return(df)
+        orderList.extend(resp_json["data"])
+    df=pd.DataFrame(orderList)
+    sels = ["name", "type_line", "colors", "mana_cost", "cmc", "oracle_text", "power", "toughness", "keywords", "loyalty", "rarity"]
+    df = df[sels]
+    df[['Super Type','Sub type']] = df['type_line'].apply(lambda x: pd.Series(str(x).split("—")))
+    df = df.drop(['type_line'], axis=1)
+    df.columns = df.columns.str.replace('_', ' ')
+    df.columns = df.columns.str.capitalize()
+    df = movecol(df, 
+        cols_to_move=['Super type','Sub type'], 
+        ref_col='Name',
+        place='After')
+    df['Colors'] = df['Colors'].apply(lambda x: ' '.join(x))
+    df['Colors'] = df['Colors'].replace(idents)
+    return(df)
+
+
+
+
+afr = get_set("https://api.scryfall.com/cards/search?q=set:afr")
+
+afr.to_csv('data/afr.csv')
